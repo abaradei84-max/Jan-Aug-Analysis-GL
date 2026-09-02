@@ -1,31 +1,119 @@
-const $=id=>document.getElementById(id),F=n=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n||0),PCT=n=>(Number.isFinite(n)?n:0).toFixed(1)+'%',E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let DB=window.GL_DATA&&window.GL_DATA.p?window.GL_DATA:{p:[],m:[],c:[]};
-const FB=window.GL_FILTER_DATA;
-if((!DB.p||!DB.p.length)&&FB&&FB.s&&FB.z){
-  const sm=new Map(FB.s.map(x=>[x[0],x]));
-  const p=[];
-  FB.z.forEach(z=>{
-    const s=sm.get(z[0])||[],s25=z[3]||0,s26=z[4]||0;
-    const sold25=(s[5]||s[1]||0)*(s[1]?s25/s[1]:0), sold26=(s[8]||s[2]||0)*(s[2]?s26/s[2]:0);
-    const exp25=(s[6]||0)*(s[1]?s25/s[1]:0), exp26=(s[9]||0)*(s[2]?s26/s[2]:0);
-    p.push([2025,z[0],z[2],s25,sold25,0,exp25,0,0]);
-    p.push([2026,z[0],z[2],s26,sold26,0,exp26,0,0]);
-  });
-  DB={p,m:[],c:[]};
+const $=id=>document.getElementById(id);
+const F=n=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(n)||0);
+const PCT=n=>(Number.isFinite(Number(n))?Number(n):0).toFixed(1)+'%';
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const FB=window.GL_FILTER_DATA||{s:[],z:[]};
+const DETAIL=window.GL_DATA||{m:[],c:[]};
+const M=Array.isArray(DETAIL.m)?DETAIL.m:[];
+const C=Array.isArray(DETAIL.c)?DETAIL.c:[];
+
+// Authoritative filter dataset: NEVER derive Product/Zone choices from compressed detail data.
+const summaries=new Map((FB.s||[]).map(x=>[x[0],x]));
+const P=[];
+(FB.z||[]).forEach(z=>{
+  const product=z[0], zone=z[2], s25=Number(z[3])||0, s26=Number(z[4])||0;
+  const sm=summaries.get(product)||[];
+  const expRate25=Number(sm[5])||0, expRate26=Number(sm[6])||0;
+  const exp25=Math.abs(s25)*expRate25, exp26=Math.abs(s26)*expRate26;
+  P.push([2025,product,zone,s25,Math.abs(s25),0,exp25,0,0]);
+  P.push([2026,product,zone,s26,Math.abs(s26),0,exp26,0,0]);
+});
+
+const ALL_PRODUCTS=[...new Set((FB.s||[]).map(x=>x[0]).filter(Boolean))];
+const ALL_ZONES=[...new Set((FB.z||[]).map(x=>x[2]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+
+function setOptions(id,values,label,current=''){
+  const e=$(id); if(!e) return;
+  e.innerHTML=`<option value="">${label}</option>`+values.map(v=>`<option value="${E(v)}">${E(v)}</option>`).join('');
+  if(current && values.includes(current)) e.value=current;
 }
-const P=DB.p||[],M=DB.m||[],C=DB.c||[];
-function sel(id,a,label,current=''){const e=$(id);e.innerHTML='<option value="">'+label+'</option>'+a.map(v=>'<option value="'+E(v)+'">'+E(v)+'</option>').join('');if(a.includes(current))e.value=current}
-function filterChoices(changed){const b=$('brand').value,z=$('zone').value;const products=[...new Set(P.filter(x=>!z||x[2]===z).map(x=>x[1]).filter(Boolean))].sort();const zones=[...new Set(P.filter(x=>!b||x[1]===b).map(x=>x[2]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));sel('brand',products,'All Products',b);sel('zone',zones,'All Zones',z);}
-['sku','state','month'].forEach((id,i)=>{sel(id,[],['All SKUs (YTD)','All States (YTD)','Jan–Aug YTD'][i]);$(id).disabled=true});
-function rows(){const b=$('brand').value,z=$('zone').value;return P.filter(x=>(!b||x[1]===b)&&(!z||x[2]===z))}
-function tot(a,y){return a.filter(x=>x[0]===y).reduce((t,x)=>{for(let i=3;i<9;i++)t[i-3]+=Number(x[i])||0;return t},[0,0,0,0,0,0])}
-function grp(a,i){const m={};a.forEach(x=>{const k=x[i]||'Unspecified',o=m[k]||(m[k]={name:k,a25:[0,0,0,0,0,0],a26:[0,0,0,0,0,0]});const q=x[0]===2026?o.a26:o.a25;for(let j=3;j<9;j++)q[j-3]+=Number(x[j])||0});return Object.values(m).map(o=>{const a=o.a25,b=o.a26;return {...o,s25:a[0],s26:b[0],growth:a[0]?100*(b[0]-a[0])/a[0]:(b[0]?100:0),expire:b[3],expireRate:b[1]?100*b[3]/b[1]:0,bonusRate:b[4]?100*b[5]/b[4]:0,returnRate:b[1]?100*b[2]/b[1]:0}})}
-function bars(id,a,key,p=false,n=14){a=[...a].sort((x,y)=>(y[key]||0)-(x[key]||0)).slice(0,n);const mx=Math.max(1,...a.map(x=>Math.abs(x[key]||0)));$(id).innerHTML=a.length?a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x[key]||0)/mx*100}%"></div></div><div class="value">${p?PCT(x[key]):F(x[key])}</div></div>`).join(''):'<div class="note">No matching data</div>'}
-function table(id,a,cols){$(id).innerHTML=a.length?a.map(x=>'<tr>'+cols.map(f=>'<td>'+f(x)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="9">No matching data</td></tr>'}
-function cust(){if(!C.length)return {g:[],d:[],ri:6,di:7};const z=$('zone').value,q=$('search').value.toLowerCase(),ri=z?8:6,di=z?9:7;const a=C.filter(x=>(!z||x[0]===z)&&(!q||String(x[1]).toLowerCase().includes(q)||String(x[0]).toLowerCase().includes(q)));return {g:a.filter(x=>x[ri]).sort((x,y)=>x[ri]-y[ri]),d:a.filter(x=>x[di]).sort((x,y)=>x[di]-y[di]),ri,di}}
-function ctab(id,a,ri){$(id).innerHTML=a.length?a.map(x=>`<tr><td>${E(x[0])}</td><td>Portfolio</td><td>${x[ri]}</td><td>${E(x[1])}</td><td>${F(x[2])}</td><td>${F(x[3])}</td><td class="${x[4]>=0?'pos':'neg'}">${PCT(x[4])}</td><td class="${x[5]>=0?'pos':'neg'}">${F(x[5])}</td></tr>`).join(''):'<tr><td colspan="8">Detailed customer ranking data is loading only when the full dataset is available.</td></tr>'}
-function cbars(id,a){if(!a.length){$(id).innerHTML='<div class="note">Detailed customer data unavailable in fallback mode.</div>';return}const b=a.slice(0,10).map(x=>({name:x[1],v:x[5]})),mx=Math.max(1,...b.map(x=>Math.abs(x.v)));$(id).innerHTML=b.map(x=>`<div class="bar"><div class="name">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x.v)/mx*100}%"></div></div><div class="value">${F(x.v)}</div></div>`).join('')}
-function trend(){if(!M.length){$('trend').innerHTML='<text x="450" y="150" text-anchor="middle" class="axis">Monthly detail unavailable — YTD filters and product/zone results are active</text>';return}const b=$('brand').value,z=$('zone').value,months=['January','February','March','April','May','June','July','August'];const a=months.map(m=>M.filter(x=>x[0]===2025&&x[1]===m&&(!b||x[2]===b)&&(!z||!x[4]||x[4]===z)).reduce((s,x)=>s+(Number(x[3])||0),0)),c=months.map(m=>M.filter(x=>x[0]===2026&&x[1]===m&&(!b||x[2]===b)&&(!z||!x[4]||x[4]===z)).reduce((s,x)=>s+(Number(x[3])||0),0)),mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');$('trend').innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('')}
-function render(){filterChoices();const a=rows(),t26=tot(a,2026),t25=tot(a,2025),zs=grp(a,2),ps=grp(a,1),growth=t25[0]?100*(t26[0]-t25[0])/t25[0]:(t26[0]?100:0),top=[...zs].sort((x,y)=>y.s26-x.s26)[0],cc=cust();$('sales26').textContent=F(t26[0]);$('sales25').textContent='2025: '+F(t25[0]);$('growth').textContent=PCT(growth);$('growth').className=growth>=0?'pos':'neg';$('expire').textContent=F(t26[3]);$('expireRate').textContent=PCT(t26[1]?100*t26[3]/t26[1]:0)+' of Sold Amount';$('bonus').textContent=PCT(t26[4]?100*t26[5]/t26[4]:0);$('bonusQty').textContent=F(t26[5])+' bonus qty';$('returnRate').textContent=PCT(t26[1]?100*t26[2]/t26[1]:0);$('returnValue').textContent=F(t26[2])+' returned';$('topZone').textContent=top?top.name:'—';$('topShare').textContent=PCT(top&&t26[0]?100*top.s26/t26[0]:0)+' share';$('growCount').textContent=cc.g.length;$('declineCount').textContent=cc.d.length;bars('compare',zs,'s26');bars('growthBars',zs,'growth',true);bars('expireZone',zs,'expire');bars('expireZone2',zs,'expire');bars('productSales',ps,'s26');bars('productGrowth',ps,'growth',true);bars('expireProduct',ps,'expire');bars('expireProduct2',ps,'expire');bars('bonusProduct',ps,'bonusRate',true);bars('bonusProduct2',ps,'bonusRate',true);bars('bonusZone',zs,'bonusRate',true);table('zoneBody',zs,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(t26[0]?100*x.s26/t26[0]:0),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);table('productBody',ps,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);ctab('growthTable',cc.g,cc.ri);ctab('declineTable',cc.d,cc.di);cbars('growBars',cc.g);cbars('declineBars',cc.d);$('donutTotal').textContent=F(t26[0]);$('legend').innerHTML=[...zs].sort((x,y)=>y.s26-x.s26).map(x=>`<div class="legendItem"><span>${E(x.name)}</span><strong>${PCT(t26[0]?100*x.s26/t26[0]:0)}</strong></div>`).join('');$('smart').innerHTML=`<div class="smartCard"><span>Selected Product</span><strong>${E($('brand').value||'All Products')}</strong><small>${F(t26[0])} sales in 2026</small></div><div class="smartCard"><span>Selected Zone</span><strong>${E($('zone').value||'All Zones')}</strong><small>${top?E(top.name):'—'} top zone</small></div><div class="smartCard"><span>YTD Growth</span><strong class="${growth>=0?'pos':'neg'}">${PCT(growth)}</strong><small>Jan–Aug 2026 vs 2025</small></div><div class="smartCard"><span>Expire %</span><strong>${PCT(t26[1]?100*t26[3]/t26[1]:0)}</strong><small>Sales Return-Expired</small></div>`;trend()}
-function changed(){render()}
-['brand','zone'].forEach(id=>$(id).addEventListener('change',changed));$('search').addEventListener('input',render);$('resetBtn').onclick=()=>{$('brand').value='';$('zone').value='';$('search').value='';render()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.view).classList.add('active')});$('langBtn').onclick=()=>{};filterChoices();render();
+
+function refreshFilterOptions(source=''){
+  const brand=$('brand'), zone=$('zone');
+  const currentProduct=brand?brand.value:'';
+  const currentZone=zone?zone.value:'';
+  const products=currentZone
+    ? [...new Set((FB.z||[]).filter(x=>x[2]===currentZone).map(x=>x[0]))]
+    : ALL_PRODUCTS;
+  const zones=currentProduct
+    ? [...new Set((FB.z||[]).filter(x=>x[0]===currentProduct).map(x=>x[2]))].sort((a,b)=>String(a).localeCompare(String(b),'ar'))
+    : ALL_ZONES;
+  setOptions('brand',products,'All Products',currentProduct);
+  setOptions('zone',zones,'All Zones',currentZone);
+}
+
+setOptions('brand',ALL_PRODUCTS,'All Products');
+setOptions('zone',ALL_ZONES,'All Zones');
+['sku','state','month'].forEach((id,i)=>{
+  setOptions(id,[],['All SKUs (YTD)','All States (YTD)','Jan–Aug YTD'][i]);
+  if($(id)) $(id).disabled=true;
+});
+
+function rows(){
+  const b=$('brand')?.value||'', z=$('zone')?.value||'';
+  return P.filter(x=>(!b||x[1]===b)&&(!z||x[2]===z));
+}
+function tot(a,y){
+  return a.filter(x=>x[0]===y).reduce((t,x)=>{for(let i=3;i<9;i++)t[i-3]+=Number(x[i])||0;return t},[0,0,0,0,0,0]);
+}
+function grp(a,i){
+  const m={};
+  a.forEach(x=>{
+    const k=x[i]||'Unspecified';
+    const o=m[k]||(m[k]={name:k,a25:[0,0,0,0,0,0],a26:[0,0,0,0,0,0]});
+    const q=x[0]===2026?o.a26:o.a25;
+    for(let j=3;j<9;j++)q[j-3]+=Number(x[j])||0;
+  });
+  return Object.values(m).map(o=>{
+    const a=o.a25,b=o.a26;
+    return {...o,s25:a[0],s26:b[0],growth:a[0]?100*(b[0]-a[0])/a[0]:(b[0]?100:0),expire:b[3],expireRate:b[1]?100*b[3]/b[1]:0,bonusRate:b[4]?100*b[5]/b[4]:0,returnRate:b[1]?100*b[2]/b[1]:0};
+  });
+}
+function bars(id,a,key,p=false,n=14){
+  const el=$(id); if(!el)return;
+  a=[...a].sort((x,y)=>(y[key]||0)-(x[key]||0)).slice(0,n);
+  const mx=Math.max(1,...a.map(x=>Math.abs(x[key]||0)));
+  el.innerHTML=a.length?a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x[key]||0)/mx*100}%"></div></div><div class="value">${p?PCT(x[key]):F(x[key])}</div></div>`).join(''):'<div class="note">No matching data</div>';
+}
+function table(id,a,cols){const el=$(id);if(!el)return;el.innerHTML=a.length?a.map(x=>'<tr>'+cols.map(f=>'<td>'+f(x)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="9">No matching data</td></tr>'}
+function customerData(){
+  if(!C.length)return {g:[],d:[],ri:6,di:7};
+  const z=$('zone')?.value||'',q=($('search')?.value||'').toLowerCase(),ri=z?8:6,di=z?9:7;
+  const a=C.filter(x=>(!z||x[0]===z)&&(!q||String(x[1]).toLowerCase().includes(q)||String(x[0]).toLowerCase().includes(q)));
+  return {g:a.filter(x=>x[ri]).sort((x,y)=>x[ri]-y[ri]),d:a.filter(x=>x[di]).sort((x,y)=>x[di]-y[di]),ri,di};
+}
+function ctab(id,a,ri){const el=$(id);if(!el)return;el.innerHTML=a.length?a.map(x=>`<tr><td>${E(x[0])}</td><td>Portfolio</td><td>${x[ri]}</td><td>${E(x[1])}</td><td>${F(x[2])}</td><td>${F(x[3])}</td><td class="${x[4]>=0?'pos':'neg'}">${PCT(x[4])}</td><td class="${x[5]>=0?'pos':'neg'}">${F(x[5])}</td></tr>`).join(''):'<tr><td colspan="8">Detailed customer data unavailable.</td></tr>'}
+function cbars(id,a){const el=$(id);if(!el)return;if(!a.length){el.innerHTML='<div class="note">Detailed customer data unavailable.</div>';return}const b=a.slice(0,10).map(x=>({name:x[1],v:x[5]})),mx=Math.max(1,...b.map(x=>Math.abs(x.v)));el.innerHTML=b.map(x=>`<div class="bar"><div class="name">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x.v)/mx*100}%"></div></div><div class="value">${F(x.v)}</div></div>`).join('')}
+function trend(){
+  const el=$('trend');if(!el)return;
+  if(!M.length){el.innerHTML='<text x="450" y="150" text-anchor="middle" class="axis">Jan–Aug YTD product and zone filters are active</text>';return}
+  const b=$('brand')?.value||'',months=['January','February','March','April','May','June','July','August'];
+  const a=months.map(m=>M.filter(x=>x[0]===2025&&x[1]===m&&(!b||x[2]===b)).reduce((s,x)=>s+(Number(x[3])||0),0));
+  const c=months.map(m=>M.filter(x=>x[0]===2026&&x[1]===m&&(!b||x[2]===b)).reduce((s,x)=>s+(Number(x[3])||0),0));
+  const mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');
+  el.innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('');
+}
+function render(){
+  const a=rows(),t26=tot(a,2026),t25=tot(a,2025),zs=grp(a,2),ps=grp(a,1);
+  const growth=t25[0]?100*(t26[0]-t25[0])/t25[0]:(t26[0]?100:0),top=[...zs].sort((x,y)=>y.s26-x.s26)[0],cc=customerData();
+  $('sales26').textContent=F(t26[0]);$('sales25').textContent='2025: '+F(t25[0]);$('growth').textContent=PCT(growth);$('growth').className=growth>=0?'pos':'neg';
+  $('expire').textContent=F(t26[3]);$('expireRate').textContent=PCT(t26[1]?100*t26[3]/t26[1]:0)+' of Sales';
+  $('bonus').textContent=PCT(0);$('bonusQty').textContent='YTD';$('returnRate').textContent=PCT(0);$('returnValue').textContent='YTD';
+  $('topZone').textContent=top?top.name:'—';$('topShare').textContent=PCT(top&&t26[0]?100*top.s26/t26[0]:0)+' share';$('growCount').textContent=cc.g.length;$('declineCount').textContent=cc.d.length;
+  bars('compare',zs,'s26');bars('growthBars',zs,'growth',true);bars('expireZone',zs,'expire');bars('expireZone2',zs,'expire');bars('productSales',ps,'s26');bars('productGrowth',ps,'growth',true);bars('expireProduct',ps,'expire');bars('expireProduct2',ps,'expire');bars('bonusProduct',ps,'bonusRate',true);bars('bonusProduct2',ps,'bonusRate',true);bars('bonusZone',zs,'bonusRate',true);
+  table('zoneBody',zs,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(t26[0]?100*x.s26/t26[0]:0),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);
+  table('productBody',ps,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);
+  ctab('growthTable',cc.g,cc.ri);ctab('declineTable',cc.d,cc.di);cbars('growBars',cc.g);cbars('declineBars',cc.d);
+  $('donutTotal').textContent=F(t26[0]);$('legend').innerHTML=[...zs].sort((x,y)=>y.s26-x.s26).map(x=>`<div class="legendItem"><span>${E(x.name)}</span><strong>${PCT(t26[0]?100*x.s26/t26[0]:0)}</strong></div>`).join('');
+  $('smart').innerHTML=`<div class="smartCard"><span>Selected Product</span><strong>${E($('brand').value||'All Products')}</strong><small>${F(t26[0])} sales in 2026</small></div><div class="smartCard"><span>Selected Zone</span><strong>${E($('zone').value||'All Zones')}</strong><small>${top?E(top.name):'—'} top zone</small></div><div class="smartCard"><span>YTD Growth</span><strong class="${growth>=0?'pos':'neg'}">${PCT(growth)}</strong><small>Jan–Aug 2026 vs 2025</small></div><div class="smartCard"><span>Expire %</span><strong>${PCT(t26[1]?100*t26[3]/t26[1]:0)}</strong><small>Sales Return-Expired</small></div>`;
+  trend();
+}
+
+$('brand')?.addEventListener('change',()=>{refreshFilterOptions('brand');render()});
+$('zone')?.addEventListener('change',()=>{refreshFilterOptions('zone');render()});
+$('search')?.addEventListener('input',render);
+$('resetBtn').onclick=()=>{$('brand').value='';$('zone').value='';$('search').value='';refreshFilterOptions();render()};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.view).classList.add('active')});
+$('langBtn').onclick=()=>{};
+refreshFilterOptions();render();
