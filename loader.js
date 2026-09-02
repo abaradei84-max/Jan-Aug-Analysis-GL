@@ -1,4 +1,5 @@
 (async()=>{
+  const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
   const gunzip=async b64=>{
     const bin=atob((b64||'').replace(/\s/g,''));
     const bytes=new Uint8Array(bin.length);
@@ -7,19 +8,21 @@
     return await new Response(stream).text();
   };
   try{
+    await loadScript('filters.js?v=8');
+  }catch(e){ console.error('filters.js failed to load',e); }
+  try{
     if(window.GL_FILTER_B64){
       const fallbackText=await gunzip(window.GL_FILTER_B64);
       (0,eval)(fallbackText);
     }
-  }catch(e){ console.error('Fallback data load failed',e); }
+  }catch(e){ console.error('Compressed fallback data load failed',e); }
   try{
     if(window.GL_B64){
       const text=await gunzip(window.GL_B64);
       window.GL_DATA=JSON.parse(text);
     }
-  }catch(e){ console.error('Detailed dashboard data load failed; using fallback',e); }
+  }catch(e){ console.error('Detailed dashboard data load failed; using filters.js fallback',e); }
   window.GL_B64='';window.GL_FILTER_B64='';
-  const sc=document.createElement('script');
-  sc.src='app.js?v=6';
-  document.body.appendChild(sc);
+  try{ await loadScript('app.js?v=8'); }
+  catch(e){ console.error('app.js failed to load',e); }
 })();
