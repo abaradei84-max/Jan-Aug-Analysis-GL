@@ -1,109 +1,12 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GL Sales Analysis Jan–Aug</title>
-<link rel="stylesheet" href="style.css?v=1">
-</head>
-<body>
-<div class="app">
-<header class="hero neon">
-  <div>
-    <div class="eyebrow">GL PORTFOLIO • JAN–AUG YTD</div>
-    <h1 id="pageTitle">تحليل مبيعات GL — Jan–Aug</h1>
-    <div class="sub" id="pageSub">Uniflox • Dinixir • Ruatine • Unicast 10mg • Olaxy • Hi Dee Drops — مقارنة عادلة Jan–Aug 2026 vs 2025</div>
-  </div>
-  <div class="actions"><button id="langBtn" class="pill">English</button><button id="resetBtn" class="pill">إعادة الفلاتر</button></div>
-</header>
-
-<section class="filters neon">
-  <div><label id="productLbl">الصنف</label><select id="brand"></select></div>
-  <div><label id="skuLbl">SKU / العبوة</label><select id="sku"></select></div>
-  <div><label id="zoneLbl">Zone</label><select id="zone"></select></div>
-  <div><label id="stateLbl">State</label><select id="state"></select></div>
-  <div><label id="monthLbl">الشهر</label><select id="month"></select></div>
-  <div><label id="searchLbl">بحث عميل</label><input id="search" placeholder="Customer / Zone"></div>
-</section>
-
-<section class="kpis">
-  <div class="kpi neon"><span>Net Sales 2026</span><strong id="sales26"></strong><small id="sales25"></small></div>
-  <div class="kpi neon"><span>YTD Growth</span><strong id="growth"></strong><small>Jan–Aug 2026 vs 2025</small></div>
-  <div class="kpi neon"><span>Expire Return Value</span><strong id="expire"></strong><small id="expireRate"></small></div>
-  <div class="kpi neon"><span>Net Bonus Qty %</span><strong id="bonus"></strong><small id="bonusQty"></small></div>
-  <div class="kpi neon"><span>Total Return %</span><strong id="returnRate"></strong><small id="returnValue"></small></div>
-  <div class="kpi neon"><span>Top Zone</span><strong id="topZone"></strong><small id="topShare"></small></div>
-  <div class="kpi neon"><span>Growth Customers ≥10%</span><strong id="growCount"></strong><small>Same Customer + Zone + Product</small></div>
-  <div class="kpi neon"><span>Decline Customers ≤-10%</span><strong id="declineCount"></strong><small>2026 vs 2025</small></div>
-</section>
-
-<nav class="tabs">
-  <button class="tab active" data-view="overviewView" id="tabOverview">ملخص تنفيذي</button>
-  <button class="tab" data-view="zoneView" id="tabZones">تحليل Zone</button>
-  <button class="tab" data-view="productView" id="tabProducts">تحليل الأصناف</button>
-  <button class="tab" data-view="customerView" id="tabCustomers">نمو العملاء</button>
-  <button class="tab" data-view="returnView" id="tabReturns">المرتجعات والـBonus</button>
-</nav>
-
-<section id="overviewView" class="view active">
-  <div class="grid">
-    <article class="panel neon"><h2>Sales by Zone • 2026 vs 2025 YTD</h2><div id="compare" class="bars"></div></article>
-    <article class="panel neon"><h2>2026 Sales Share by Zone</h2><div class="donutWrap"><div class="donut" id="donut"><div><strong id="donutTotal"></strong><small>Net Sales 2026</small></div></div><div id="legend" class="legend"></div></div></article>
-  </div>
-  <div class="grid">
-    <article class="panel neon"><h2>Monthly Sales Trend</h2><div class="svgWrap"><svg id="trend" viewBox="0 0 900 300" preserveAspectRatio="none"></svg></div></article>
-    <article class="panel neon"><h2>Smart Art • Executive Insights</h2><div id="smart" class="smart"></div></article>
-  </div>
-</section>
-
-<section id="zoneView" class="view">
-  <div class="grid">
-    <article class="panel neon"><h2>Growth % by Zone</h2><div id="growthBars" class="bars"></div></article>
-    <article class="panel neon"><h2>Expire Return Value by Zone</h2><div id="expireZone" class="bars"></div></article>
-  </div>
-  <article class="panel neon"><h2>Zone Performance</h2><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Sales 2026</th><th>Sales 2025</th><th>Share %</th><th>Growth %</th><th>Expire Return</th><th>Expire %</th><th>Bonus %</th><th>Total Return %</th></tr></thead><tbody id="zoneBody"></tbody></table></div></article>
-</section>
-
-<section id="productView" class="view">
-  <div class="grid">
-    <article class="panel neon"><h2>Sales by Product</h2><div id="productSales" class="bars"></div></article>
-    <article class="panel neon"><h2>Growth % by Product</h2><div id="productGrowth" class="bars"></div></article>
-  </div>
-  <div class="grid">
-    <article class="panel neon"><h2>Expire Return by Product</h2><div id="expireProduct" class="bars"></div></article>
-    <article class="panel neon"><h2>Net Bonus Qty % by Product</h2><div id="bonusProduct" class="bars"></div></article>
-  </div>
-  <article class="panel neon"><h2>Product Performance</h2><div class="tableWrap"><table><thead><tr><th>Product</th><th>Sales 2026</th><th>Sales 2025</th><th>Growth %</th><th>Expire Return</th><th>Expire %</th><th>Bonus %</th><th>Total Return %</th></tr></thead><tbody id="productBody"></tbody></table></div></article>
-</section>
-
-<section id="customerView" class="view">
-  <div class="grid">
-    <article class="panel neon"><h2>Top Growing Customers • Ranked by Δ Sales</h2><div id="growBars" class="bars"></div></article>
-    <article class="panel neon"><h2>Top Declining Customers • Ranked by Δ Sales</h2><div id="declineBars" class="bars"></div></article>
-  </div>
-  <article class="panel neon"><h2 id="growthTableTitle">Top 10 عملاء نموًا في كل Zone + Product</h2><div class="note">Growth ≥10%. Ranked by positive sales impact (Δ Sales) within every Zone + Product. New customers without 2025 sales base are excluded.</div><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Product</th><th>Rank</th><th>Customer</th><th>Sales 2025</th><th>Sales 2026</th><th>Growth %</th><th>Δ Sales</th></tr></thead><tbody id="growthTable"></tbody></table></div></article>
-  <article class="panel neon"><h2 id="declineTableTitle">Top 10 عملاء هبوطًا في كل Zone + Product</h2><div class="note">Decline ≤-10%. Ranked by negative sales impact (Δ Sales) within every Zone + Product.</div><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Product</th><th>Rank</th><th>Customer</th><th>Sales 2025</th><th>Sales 2026</th><th>Decline %</th><th>Δ Sales</th></tr></thead><tbody id="declineTable"></tbody></table></div></article>
-</section>
-
-<section id="returnView" class="view">
-  <div class="grid">
-    <article class="panel neon"><h2>Expire Return Value by Zone</h2><div id="expireZone2" class="bars"></div></article>
-    <article class="panel neon"><h2>Net Bonus Qty % by Zone</h2><div id="bonusZone" class="bars"></div></article>
-  </div>
-  <div class="grid">
-    <article class="panel neon"><h2>Expire Return by Product</h2><div id="expireProduct2" class="bars"></div></article>
-    <article class="panel neon"><h2>Net Bonus Qty % by Product</h2><div id="bonusProduct2" class="bars"></div></article>
-  </div>
-</section>
-
-<footer>Sales = Net Amount (Invoiced) • Expire Return Value = absolute Returned Amount where Warehouse = Sales Return-Expired • Expire % = Expire Return ÷ Sold Amount • Bonus % = Net Bonus Qty ÷ Net Qty • Fair YTD = Jan–Aug for both years. “Unicat 10mg” is mapped to the file item “Unicast 10 Tablets 30's”.</footer>
-</div>
-<script src="data01.js?v=1"></script>
-<script src="data02.js?v=1"></script>
-<script src="data03.js?v=1"></script>
-<script src="data04.js?v=1"></script>
-<script src="data05.js?v=1"></script>
-<script src="data06.js?v=1"></script>
-<script src="data07.js?v=1"></script>
-<script src="app.js?v=1"></script>
-</body></html>
+<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GL Sales Analysis Jan–Aug</title><link rel="stylesheet" href="style.css?v=3"></head><body><div class="app">
+<header class="hero neon"><div><div class="eyebrow">GL PORTFOLIO • JAN–AUG YTD</div><h1>GL Sales Analysis — Jan–Aug</h1><div class="sub">Uniflox • Dinixir • Ruatine • Unicast 10mg • Olaxy • Hi Dee Drops — Fair Jan–Aug 2026 vs 2025 YTD</div></div><div class="actions"><button id="langBtn" class="pill">Dashboard</button><button id="resetBtn" class="pill">Reset Filters</button></div></header>
+<section class="filters neon"><div><label>Product</label><select id="brand"></select></div><div><label>SKU / Pack</label><select id="sku"></select></div><div><label>Zone</label><select id="zone"></select></div><div><label>State</label><select id="state"></select></div><div><label>Period</label><select id="month"></select></div><div><label>Customer Search</label><input id="search" placeholder="Customer / Zone"></div></section>
+<section class="kpis"><div class="kpi neon"><span>Net Sales 2026</span><strong id="sales26"></strong><small id="sales25"></small></div><div class="kpi neon"><span>YTD Growth</span><strong id="growth"></strong><small>Jan–Aug 2026 vs 2025</small></div><div class="kpi neon"><span>Expire Return Value</span><strong id="expire"></strong><small id="expireRate"></small></div><div class="kpi neon"><span>Net Bonus Qty %</span><strong id="bonus"></strong><small id="bonusQty"></small></div><div class="kpi neon"><span>Total Return %</span><strong id="returnRate"></strong><small id="returnValue"></small></div><div class="kpi neon"><span>Top Zone</span><strong id="topZone"></strong><small id="topShare"></small></div><div class="kpi neon"><span>Ranked Growth Customers</span><strong id="growCount"></strong><small>Growth ≥10%</small></div><div class="kpi neon"><span>Ranked Decline Customers</span><strong id="declineCount"></strong><small>Decline ≤-10%</small></div></section>
+<nav class="tabs"><button class="tab active" data-view="overviewView">Executive Overview</button><button class="tab" data-view="zoneView">Zone Analysis</button><button class="tab" data-view="productView">Product Analysis</button><button class="tab" data-view="customerView">Customer Growth</button><button class="tab" data-view="returnView">Returns & Bonus</button></nav>
+<section id="overviewView" class="view active"><div class="grid"><article class="panel neon"><h2>Sales by Zone • 2026 vs 2025 YTD</h2><div id="compare" class="bars"></div></article><article class="panel neon"><h2>2026 Sales Share by Zone</h2><div class="donutWrap"><div class="donut" id="donut"><div><strong id="donutTotal"></strong><small>Net Sales 2026</small></div></div><div id="legend" class="legend"></div></div></article></div><div class="grid"><article class="panel neon"><h2>Monthly Sales Trend</h2><div class="svgWrap"><svg id="trend" viewBox="0 0 900 300" preserveAspectRatio="none"></svg></div></article><article class="panel neon"><h2>Executive Insights</h2><div id="smart" class="smart"></div></article></div></section>
+<section id="zoneView" class="view"><div class="grid"><article class="panel neon"><h2>Growth % by Zone</h2><div id="growthBars" class="bars"></div></article><article class="panel neon"><h2>Expire Return Value by Zone</h2><div id="expireZone" class="bars"></div></article></div><article class="panel neon"><h2>Zone Performance</h2><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Sales 2026</th><th>Sales 2025</th><th>Share %</th><th>Growth %</th><th>Expire Return</th><th>Expire %</th><th>Bonus %</th><th>Total Return %</th></tr></thead><tbody id="zoneBody"></tbody></table></div></article></section>
+<section id="productView" class="view"><div class="grid"><article class="panel neon"><h2>Sales by Product</h2><div id="productSales" class="bars"></div></article><article class="panel neon"><h2>Growth % by Product</h2><div id="productGrowth" class="bars"></div></article></div><div class="grid"><article class="panel neon"><h2>Expire Return by Product</h2><div id="expireProduct" class="bars"></div></article><article class="panel neon"><h2>Net Bonus Qty % by Product</h2><div id="bonusProduct" class="bars"></div></article></div><article class="panel neon"><h2>Product Performance</h2><div class="tableWrap"><table><thead><tr><th>Product</th><th>Sales 2026</th><th>Sales 2025</th><th>Growth %</th><th>Expire Return</th><th>Expire %</th><th>Bonus %</th><th>Total Return %</th></tr></thead><tbody id="productBody"></tbody></table></div></article></section>
+<section id="customerView" class="view"><div class="grid"><article class="panel neon"><h2>Top Growing Customers • Δ Sales</h2><div id="growBars" class="bars"></div></article><article class="panel neon"><h2>Top Declining Customers • Δ Sales</h2><div id="declineBars" class="bars"></div></article></div><article class="panel neon"><h2>Top 10 Growth Customers — Overall / Selected Zone</h2><div class="note">Growth ≥10%; ranked by sales impact. Customers without a positive 2025 base are excluded.</div><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Scope</th><th>Rank</th><th>Customer</th><th>Sales 2025</th><th>Sales 2026</th><th>Growth %</th><th>Δ Sales</th></tr></thead><tbody id="growthTable"></tbody></table></div></article><article class="panel neon"><h2>Top 10 Decline Customers — Overall / Selected Zone</h2><div class="note">Decline ≤-10%; ranked by negative sales impact.</div><div class="tableWrap"><table><thead><tr><th>Zone</th><th>Scope</th><th>Rank</th><th>Customer</th><th>Sales 2025</th><th>Sales 2026</th><th>Decline %</th><th>Δ Sales</th></tr></thead><tbody id="declineTable"></tbody></table></div></article></section>
+<section id="returnView" class="view"><div class="grid"><article class="panel neon"><h2>Expire Return Value by Zone</h2><div id="expireZone2" class="bars"></div></article><article class="panel neon"><h2>Net Bonus Qty % by Zone</h2><div id="bonusZone" class="bars"></div></article></div><div class="grid"><article class="panel neon"><h2>Expire Return by Product</h2><div id="expireProduct2" class="bars"></div></article><article class="panel neon"><h2>Net Bonus Qty % by Product</h2><div id="bonusProduct2" class="bars"></div></article></div></section>
+<footer>Sales = Net Amount • Expire Return = Sales Return-Expired • Expire % = Expire Return ÷ Sold Amount • Fair YTD = Jan–Aug for both years. Product and Zone filters are active; customer rankings are portfolio-level across the six requested products.</footer></div>
+<script src="data01.js?v=3"></script><script src="data02.js?v=3"></script><script src="data03.js?v=3"></script><script src="data04.js?v=3"></script><script src="data05.js?v=3"></script><script src="data06.js?v=3"></script><script src="data07.js?v=3"></script><script src="data08.js?v=3"></script><script src="data09.js?v=3"></script><script src="data10.js?v=3"></script><script src="data11.js?v=3"></script><script src="data12.js?v=3"></script><script src="data13.js?v=3"></script><script src="data14.js?v=3"></script><script src="data15.js?v=3"></script><script src="data16.js?v=3"></script><script src="loader.js?v=3"></script></body></html>
