@@ -7,9 +7,10 @@
     const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
     return await new Response(stream).text();
   };
-  try{await loadScript('filters.js?v=12')}catch(e){console.error('filters.js failed to load',e)}
+  const fresh=Date.now();
+  try{await loadScript('filters.js?v=13&t='+fresh)}catch(e){console.error('filters.js failed to load',e)}
   try{if(window.GL_FILTER_B64){const fallbackText=await gunzip(window.GL_FILTER_B64);(0,eval)(fallbackText)}}catch(e){console.error('Compressed fallback data load failed',e)}
   try{if(window.GL_B64){const text=await gunzip(window.GL_B64),full=JSON.parse(text);window.GL_DATA={p:[],m:full.m||[],c:full.c||[]}}}catch(e){console.error('Detailed dashboard data load failed; using filters.js fallback',e)}
   window.GL_B64='';window.GL_FILTER_B64='';
-  try{await loadScript('app.js?v=12')}catch(e){console.error('app.js failed to load',e)}
+  try{await loadScript('app.js?v=13&t='+fresh)}catch(e){console.error('app.js failed to load',e)}
 })();
