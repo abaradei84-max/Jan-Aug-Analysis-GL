@@ -1,1 +1,1 @@
-.filters select option{color:#10213f;background:#f4f8ff;font-weight:700}.filters select option:checked{color:#08162b;background:#dcecff}.filters select option:hover{color:#08162b;background:#cfe4ff}
+.filters select{color-scheme:light}.filters select option{color:#061225 !important;background:#ffffff !important;font-weight:700 !important}.filters select option:checked{color:#061225 !important;background:#bcdcff !important}.filters select option:hover{color:#061225 !important;background:#d9ecff !important}
