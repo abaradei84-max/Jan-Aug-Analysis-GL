@@ -1,23 +1,25 @@
 (async()=>{
+  const gunzip=async b64=>{
+    const bin=atob((b64||'').replace(/\s/g,''));
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return await new Response(stream).text();
+  };
   try{
-    const s=window.GL_B64||"";
-    const map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let clean=s.replace(/[^A-Za-z0-9+/=]/g,""),out=[],buf=0,bits=0;
-    for(const ch of clean){
-      if(ch==="=") break;
-      const v=map.indexOf(ch); if(v<0) continue;
-      buf=(buf<<6)|v; bits+=6;
-      if(bits>=8){bits-=8;out.push((buf>>bits)&255);}
+    if(window.GL_FILTER_B64){
+      const fallbackText=await gunzip(window.GL_FILTER_B64);
+      (0,eval)(fallbackText);
     }
-    const stream=new Blob([new Uint8Array(out)]).stream().pipeThrough(new DecompressionStream("gzip"));
-    const text=await new Response(stream).text();
-    window.GL_DATA=JSON.parse(text);
-    window.GL_B64="";
-    const sc=document.createElement("script");sc.src="app.js?v=5";document.body.appendChild(sc);
-  }catch(err){
-    const d=document.createElement("div");
-    d.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#b91c1c;color:white;padding:10px;z-index:9999;font-family:Arial";
-    d.textContent="Dashboard load error: "+err.message;
-    document.body.appendChild(d);
-  }
+  }catch(e){ console.error('Fallback data load failed',e); }
+  try{
+    if(window.GL_B64){
+      const text=await gunzip(window.GL_B64);
+      window.GL_DATA=JSON.parse(text);
+    }
+  }catch(e){ console.error('Detailed dashboard data load failed; using fallback',e); }
+  window.GL_B64='';window.GL_FILTER_B64='';
+  const sc=document.createElement('script');
+  sc.src='app.js?v=6';
+  document.body.appendChild(sc);
 })();
