@@ -8,7 +8,7 @@
     return await new Response(stream).text();
   };
   try{
-    await loadScript('filters.js?v=8');
+    await loadScript('filters.js?v=9');
   }catch(e){ console.error('filters.js failed to load',e); }
   try{
     if(window.GL_FILTER_B64){
@@ -19,10 +19,11 @@
   try{
     if(window.GL_B64){
       const text=await gunzip(window.GL_B64);
-      window.GL_DATA=JSON.parse(text);
+      const full=JSON.parse(text);
+      window.GL_DATA={p:[],m:full.m||[],c:full.c||[]};
     }
   }catch(e){ console.error('Detailed dashboard data load failed; using filters.js fallback',e); }
   window.GL_B64='';window.GL_FILTER_B64='';
-  try{ await loadScript('app.js?v=8'); }
+  try{ await loadScript('app.js?v=9'); }
   catch(e){ console.error('app.js failed to load',e); }
 })();
