@@ -12,7 +12,8 @@
     const stream=new Blob([new Uint8Array(out)]).stream().pipeThrough(new DecompressionStream("gzip"));
     const text=await new Response(stream).text();
     window.GL_DATA=JSON.parse(text);
-    const sc=document.createElement("script");sc.src="app.js?v=2";document.body.appendChild(sc);
+    window.GL_B64="";
+    const sc=document.createElement("script");sc.src="app.js?v=3";document.body.appendChild(sc);
   }catch(err){
     const d=document.createElement("div");
     d.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#b91c1c;color:white;padding:10px;z-index:9999;font-family:Arial";
