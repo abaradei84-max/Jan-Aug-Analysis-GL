@@ -8,9 +8,10 @@
     return await new Response(stream).text();
   };
   const fresh=Date.now();
-  try{await loadScript('filters.js?v=13&t='+fresh)}catch(e){console.error('filters.js failed to load',e)}
+  try{await loadScript('filters.js?v=14&t='+fresh)}catch(e){console.error('filters.js failed to load',e)}
   try{if(window.GL_FILTER_B64){const fallbackText=await gunzip(window.GL_FILTER_B64);(0,eval)(fallbackText)}}catch(e){console.error('Compressed fallback data load failed',e)}
-  try{if(window.GL_B64){const text=await gunzip(window.GL_B64),full=JSON.parse(text);window.GL_DATA={p:[],m:full.m||[],c:full.c||[]}}}catch(e){console.error('Detailed dashboard data load failed; using filters.js fallback',e)}
-  window.GL_B64='';window.GL_FILTER_B64='';
-  try{await loadScript('app.js?v=13&t='+fresh)}catch(e){console.error('app.js failed to load',e)}
+  try{if(window.GL_B64){const text=await gunzip(window.GL_B64),full=JSON.parse(text);window.GL_DATA={p:[],m:full.m||[],c:full.c||[]}}}catch(e){console.error('Detailed dashboard data load failed',e)}
+  try{if(window.GL_STATE_B64){const text=await gunzip(window.GL_STATE_B64);window.GL_STATE_DATA=JSON.parse(text)}}catch(e){console.error('State data load failed',e)}
+  window.GL_B64='';window.GL_FILTER_B64='';window.GL_STATE_B64='';
+  try{await loadScript('app.js?v=14&t='+fresh)}catch(e){console.error('app.js failed to load',e)}
 })();
