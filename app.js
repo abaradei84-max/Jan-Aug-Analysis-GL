@@ -3,12 +3,15 @@ const F=n=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Numbe
 const PCT=n=>(Number.isFinite(Number(n))?Number(n):0).toFixed(1)+'%';
 const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const D=window.GL_STATE_DATA||{p:[],z:[],st:[],mo:[],m:[],mon:[],c:[]};
+const D=window.GL_STATE_DATA||{p:[],z:[],st:[],m:[]};
+const DETAIL=window.GL_DATA||{m:[],c:[]};
+const OLD_M=Array.isArray(DETAIL.m)?DETAIL.m:[];
+const OLD_C=Array.isArray(DETAIL.c)?DETAIL.c:[];
 const selectedProducts=new Set(),selectedZones=new Set(),selectedStates=new Set();
 
 const M=(D.m||[]).map(r=>({y:2025+r[0],b:D.p[r[1]],z:D.z[r[2]],st:D.st[r[3]],s:r[4],o:r[5],r:r[6],e:r[7],q:r[8],n:r[9]}));
-const MON=(D.mon||[]).map(r=>({y:2025+r[0],mo:D.mo[r[1]],b:D.p[r[2]],z:D.z[r[3]],st:D.st[r[4]],s:r[5]}));
-const CR=(D.c||[]).map(r=>({b:D.p[r[0]],z:D.z[r[1]],st:D.st[r[2]],acct:r[3],name:r[4],s25:r[5],s26:r[6]}));
+const zoneStates=new Map();
+M.forEach(r=>{if(!zoneStates.has(r.z))zoneStates.set(r.z,new Set());zoneStates.get(r.z).add(r.st)});
 
 function makeMulti(id,values,allLabel,state){
   const select=$(id);if(!select)return;
@@ -43,15 +46,18 @@ function table(id,a,cols){const el=$(id);if(!el)return;el.innerHTML=a.length?a.m
 
 function customerData(){
  const q=($('search')?.value||'').toLowerCase();
- let a=CR.filter(match).filter(x=>!q||String(x.name).toLowerCase().includes(q)||String(x.acct).toLowerCase().includes(q)||String(x.z).toLowerCase().includes(q)||String(x.st).toLowerCase().includes(q));
- a=a.filter(x=>x.s25>0).map(x=>({...x,d:x.s26-x.s25,g:100*(x.s26-x.s25)/x.s25}));
- const g=a.filter(x=>x.g>=10).sort((x,y)=>y.d-x.d).slice(0,10).map((x,i)=>({...x,rk:i+1}));
- const d=a.filter(x=>x.g<=-10).sort((x,y)=>x.d-y.d).slice(0,10).map((x,i)=>({...x,rk:i+1}));
+ if(!OLD_C.length)return {g:[],d:[]};
+ const allowedZones=selectedStates.size?new Set(M.filter(r=>selectedStates.has(r.st)).map(r=>r.z)):null;
+ const hasZone=selectedZones.size>0||selectedStates.size>0,ri=hasZone?8:6,di=hasZone?9:7;
+ let a=OLD_C.filter(x=>(!selectedZones.size||selectedZones.has(x[0]))&&(!allowedZones||allowedZones.has(x[0]))&&(!q||String(x[1]).toLowerCase().includes(q)||String(x[0]).toLowerCase().includes(q)));
+ const stateName=z=>{const ss=[...(zoneStates.get(z)||[])].filter(st=>!selectedStates.size||selectedStates.has(st));return ss.length===1?ss[0]:(ss.length?ss.join(', '):'—')};
+ const g=a.filter(x=>x[ri]).sort((x,y)=>x[ri]-y[ri]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[ri],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]}));
+ const d=a.filter(x=>x[di]).sort((x,y)=>x[di]-y[di]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[di],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]}));
  return {g,d};
 }
 function ctab(id,a){const el=$(id);if(!el)return;el.innerHTML=a.length?a.map(x=>`<tr><td>${E(x.z)}</td><td>${E(x.st)}</td><td>${x.rk}</td><td>${E(x.name)}</td><td>${F(x.s25)}</td><td>${F(x.s26)}</td><td class="${x.g>=0?'pos':'neg'}">${PCT(x.g)}</td><td class="${x.d>=0?'pos':'neg'}">${F(x.d)}</td></tr>`).join(''):'<tr><td colspan="8">No matching customer data.</td></tr>'}
 function cbars(id,a){const el=$(id);if(!el)return;if(!a.length){el.innerHTML='<div class="note">No matching customer data.</div>';return}const mx=Math.max(1,...a.map(x=>Math.abs(x.d)));el.innerHTML=a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x.d)/mx*100}%"></div></div><div class="value">${F(x.d)}</div></div>`).join('')}
-function trend(){const el=$('trend');if(!el)return;const months=D.mo||[],ok=x=>match(x),a=months.map(m=>MON.filter(x=>x.y===2025&&x.mo===m&&ok(x)).reduce((s,x)=>s+(x.s||0),0)),c=months.map(m=>MON.filter(x=>x.y===2026&&x.mo===m&&ok(x)).reduce((s,x)=>s+(x.s||0),0)),mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');el.innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('')}
+function trend(){const el=$('trend');if(!el)return;if(selectedZones.size||selectedStates.size){el.innerHTML='<text x="450" y="150" text-anchor="middle" class="axis">Monthly trend is shown at Product level; Zone/State filters apply to all KPIs and analysis charts.</text>';return}if(!OLD_M.length){el.innerHTML='';return}const months=['January','February','March','April','May','June','July','August'],ok=x=>(!selectedProducts.size||selectedProducts.has(x[2])),a=months.map(m=>OLD_M.filter(x=>x[0]===2025&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),c=months.map(m=>OLD_M.filter(x=>x[0]===2026&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');el.innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('')}
 function selectionText(set,allLabel){return set.size===0?allLabel:(set.size===1?[...set][0]:`${set.size} selected`)}
 
 function render(){
