@@ -3,79 +3,50 @@ const F=n=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Numbe
 const PCT=n=>(Number.isFinite(Number(n))?Number(n):0).toFixed(1)+'%';
 const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const D=window.GL_STATE_DATA||{p:[],z:[],st:[],m:[]};
+const D=window.GL_STATE_DATA||{};
+const FB=window.GL_FILTER_DATA||{s:[],z:[]};
 const DETAIL=window.GL_DATA||{m:[],c:[]};
 const OLD_M=Array.isArray(DETAIL.m)?DETAIL.m:[];
 const OLD_C=Array.isArray(DETAIL.c)?DETAIL.c:[];
 const selectedProducts=new Set(),selectedZones=new Set(),selectedStates=new Set();
+const HAS_STATE=Array.isArray(D.m)&&D.m.length>0&&Array.isArray(D.p)&&Array.isArray(D.z)&&Array.isArray(D.st);
 
-const M=(D.m||[]).map(r=>({y:2025+r[0],b:D.p[r[1]],z:D.z[r[2]],st:D.st[r[3]],s:r[4],o:r[5],r:r[6],e:r[7],q:r[8],n:r[9]}));
-const zoneStates=new Map();
-M.forEach(r=>{if(!zoneStates.has(r.z))zoneStates.set(r.z,new Set());zoneStates.get(r.z).add(r.st)});
+const EXACT={
+ 'Uniflox':{2025:[82317.01,83952.24,1635.23,13.09,8774,6293],2026:[72266.85,82969.93,10703.08,3049.83,7421,5864]},
+ 'Ruatine':{2025:[238978.66,289299.35,50320.69,36845.57,16751,3313],2026:[270900.49,287816.89,16916.40,9296.44,18887,4235]},
+ 'Unicast 10 mg':{2025:[89098.91,92839.66,3740.75,1012.88,7741,2968],2026:[80639.06,90975.04,10335.98,1887.64,7006,3306]},
+ 'Olaxy':{2025:[39716.26,43555.93,3839.67,2737.07,5290,885],2026:[66606.90,71516.75,4909.85,2799.13,9100,2435]},
+ 'Dinixir':{2025:[61989.42,97841.70,35852.28,28500.45,5211,1922],2026:[99474.79,153200.46,53725.67,42625.02,8964,3647]},
+ 'Hi Dee drops':{2025:[105208.92,107776.26,2567.34,36.72,34382,6078],2026:[207272.16,235815.84,28543.68,4599.18,67736,12280]}
+};
 
-function makeMulti(id,values,allLabel,state){
-  const select=$(id);if(!select)return;
-  select.disabled=false;select.style.display='none';
-  const old=select.parentNode.querySelector('.multiSelect');if(old)old.remove();
-  const wrap=document.createElement('div');wrap.className='multiSelect';
-  wrap.innerHTML=`<button type="button" class="multiBtn"><span>${allLabel}</span><b>⌄</b></button><div class="multiMenu"><div class="multiActions"><button type="button" data-act="all">Select All</button><button type="button" data-act="clear">Clear</button></div><div class="multiList">${values.map(v=>`<label><input type="checkbox" value="${E(v)}"><span>${E(v)}</span></label>`).join('')}</div></div>`;
-  select.parentNode.appendChild(wrap);
-  const btn=wrap.querySelector('.multiBtn'),menu=wrap.querySelector('.multiMenu'),label=btn.querySelector('span');
-  const sync=()=>{wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=state.has(c.value));label.textContent=state.size===0?allLabel:(state.size===1?[...state][0]:`${state.size} selected`)};
-  btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.multiSelect.open').forEach(x=>{if(x!==wrap)x.classList.remove('open')});wrap.classList.toggle('open')};
-  menu.onclick=e=>e.stopPropagation();
-  wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{c.checked?state.add(c.value):state.delete(c.value);sync();render()});
-  wrap.querySelector('[data-act=all]').onclick=()=>{values.forEach(v=>state.add(v));sync();render()};
-  wrap.querySelector('[data-act=clear]').onclick=()=>{state.clear();sync();render()};
-  wrap._sync=sync;sync();
+let M=[];
+if(HAS_STATE){
+ M=D.m.map(r=>({y:2025+r[0],b:D.p[r[1]],z:D.z[r[2]],st:D.st[r[3]],s:Number(r[4])||0,o:Number(r[5])||0,r:Number(r[6])||0,e:Number(r[7])||0,q:Number(r[8])||0,n:Number(r[9])||0}));
+}else{
+ (FB.z||[]).forEach(z=>{const b=z[0],zone=z[2],s25=Number(z[3])||0,s26=Number(z[4])||0,e=EXACT[b];if(!e)return;const f25=e[2025][0]?s25/e[2025][0]:0,f26=e[2026][0]?s26/e[2026][0]:0;M.push({y:2025,b,z:zone,st:'',s:s25,o:e[2025][1]*f25,r:e[2025][2]*f25,e:e[2025][3]*f25,q:e[2025][4]*f25,n:e[2025][5]*f25});M.push({y:2026,b,z:zone,st:'',s:s26,o:e[2026][1]*f26,r:e[2026][2]*f26,e:e[2026][3]*f26,q:e[2026][4]*f26,n:e[2026][5]*f26})});
 }
 
+const ALL_PRODUCTS=HAS_STATE?D.p:Object.keys(EXACT);
+const ALL_ZONES=HAS_STATE?D.z:[...new Set((FB.z||[]).map(x=>x[2]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+const ALL_STATES=HAS_STATE?D.st:[];
+const zoneStates=new Map();M.forEach(r=>{if(!r.st)return;if(!zoneStates.has(r.z))zoneStates.set(r.z,new Set());zoneStates.get(r.z).add(r.st)});
+
+function makeMulti(id,values,allLabel,state){const select=$(id);if(!select)return;const old=select.parentNode.querySelector('.multiSelect');if(old)old.remove();if(!values.length){select.style.display='';select.disabled=true;select.innerHTML=`<option>${allLabel}</option>`;return}select.disabled=false;select.style.display='none';const wrap=document.createElement('div');wrap.className='multiSelect';wrap.innerHTML=`<button type="button" class="multiBtn"><span>${allLabel}</span><b>⌄</b></button><div class="multiMenu"><div class="multiActions"><button type="button" data-act="all">Select All</button><button type="button" data-act="clear">Clear</button></div><div class="multiList">${values.map(v=>`<label><input type="checkbox" value="${E(v)}"><span>${E(v)}</span></label>`).join('')}</div></div>`;select.parentNode.appendChild(wrap);const btn=wrap.querySelector('.multiBtn'),menu=wrap.querySelector('.multiMenu'),label=btn.querySelector('span');const sync=()=>{wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=state.has(c.value));label.textContent=state.size===0?allLabel:(state.size===1?[...state][0]:`${state.size} selected`)};btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.multiSelect.open').forEach(x=>{if(x!==wrap)x.classList.remove('open')});wrap.classList.toggle('open')};menu.onclick=e=>e.stopPropagation();wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{c.checked?state.add(c.value):state.delete(c.value);sync();render()});wrap.querySelector('[data-act=all]').onclick=()=>{values.forEach(v=>state.add(v));sync();render()};wrap.querySelector('[data-act=clear]').onclick=()=>{state.clear();sync();render()};wrap._sync=sync;sync()}
 document.addEventListener('click',()=>document.querySelectorAll('.multiSelect.open').forEach(x=>x.classList.remove('open')));
-makeMulti('brand',D.p||[],'All Products',selectedProducts);
-makeMulti('zone',D.z||[],'All Zones',selectedZones);
-makeMulti('state',D.st||[],'All States',selectedStates);
-['sku','month'].forEach(id=>{const e=$(id);if(e)e.disabled=true});
+makeMulti('brand',ALL_PRODUCTS,'All Products',selectedProducts);makeMulti('zone',ALL_ZONES,'All Zones',selectedZones);makeMulti('state',ALL_STATES,'All States',selectedStates);['sku','month'].forEach(id=>{const e=$(id);if(e)e.disabled=true});
 
 function match(r){return (!selectedProducts.size||selectedProducts.has(r.b))&&(!selectedZones.size||selectedZones.has(r.z))&&(!selectedStates.size||selectedStates.has(r.st))}
 function rows(){return M.filter(match)}
 function tot(a,y){return a.filter(x=>x.y===y).reduce((t,x)=>{t[0]+=x.s||0;t[1]+=x.o||0;t[2]+=x.r||0;t[3]+=x.e||0;t[4]+=x.q||0;t[5]+=x.n||0;return t},[0,0,0,0,0,0])}
 function grp(a,key){const m={};a.forEach(x=>{const k=x[key]||'Unspecified',o=m[k]||(m[k]={name:k,a25:[0,0,0,0,0,0],a26:[0,0,0,0,0,0]}),q=x.y===2026?o.a26:o.a25,v=[x.s,x.o,x.r,x.e,x.q,x.n];for(let i=0;i<6;i++)q[i]+=Number(v[i])||0});return Object.values(m).map(o=>{const a=o.a25,b=o.a26;return {...o,s25:a[0],s26:b[0],growth:a[0]?100*(b[0]-a[0])/a[0]:(b[0]?100:0),expire:b[3],expireRate:b[1]?100*b[3]/b[1]:0,bonusRate:b[4]?100*b[5]/b[4]:0,returnRate:b[1]?100*b[2]/b[1]:0}})}
 function bars(id,a,key,p=false,n=14){const el=$(id);if(!el)return;a=[...a].sort((x,y)=>(y[key]||0)-(x[key]||0)).slice(0,n);const mx=Math.max(1,...a.map(x=>Math.abs(x[key]||0)));el.innerHTML=a.length?a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x[key]||0)/mx*100}%"></div></div><div class="value">${p?PCT(x[key]):F(x[key])}</div></div>`).join(''):'<div class="note">No matching data</div>'}
-function compareBars(id,a){const el=$(id);if(!el)return;a=[...a].sort((x,y)=>y.s26-x.s26).slice(0,14);const mx=Math.max(1,...a.flatMap(x=>[x.s25,x.s26]));el.innerHTML=a.length?a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div><div class="track"><div class="fill" style="width:${Math.max(0,x.s26)/mx*100}%;background:#31ecff"></div></div><div class="track" style="margin-top:3px"><div class="fill" style="width:${Math.max(0,x.s25)/mx*100}%;background:#a855f7"></div></div></div><div class="value">${F(x.s26)}</div></div>`).join(''):'<div class="note">No matching data</div>'}
+function compareBars(id,a){const el=$(id);if(!el)return;a=[...a].sort((x,y)=>y.s26-x.s26).slice(0,14);const mx=Math.max(1,...a.flatMap(x=>[x.s25,x.s26]));el.innerHTML=a.length?a.map(x=>`<div class="bar"><div class="name">${E(x.name)}</div><div><div class="track"><div class="fill" style="width:${Math.max(0,x.s26)/mx*100}%;background:#31ecff"></div></div><div class="track" style="margin-top:3px"><div class="fill" style="width:${Math.max(0,x.s25)/mx*100}%;background:#a855f7"></div></div></div><div class="value">${F(x.s26)}</div></div>`).join(''):'<div class="note">No matching data</div>'}
 function table(id,a,cols){const el=$(id);if(!el)return;el.innerHTML=a.length?a.map(x=>'<tr>'+cols.map(f=>'<td>'+f(x)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="9">No matching data</td></tr>'}
-
-function customerData(){
- const q=($('search')?.value||'').toLowerCase();
- if(!OLD_C.length)return {g:[],d:[]};
- const allowedZones=selectedStates.size?new Set(M.filter(r=>selectedStates.has(r.st)).map(r=>r.z)):null;
- const hasZone=selectedZones.size>0||selectedStates.size>0,ri=hasZone?8:6,di=hasZone?9:7;
- let a=OLD_C.filter(x=>(!selectedZones.size||selectedZones.has(x[0]))&&(!allowedZones||allowedZones.has(x[0]))&&(!q||String(x[1]).toLowerCase().includes(q)||String(x[0]).toLowerCase().includes(q)));
- const stateName=z=>{const ss=[...(zoneStates.get(z)||[])].filter(st=>!selectedStates.size||selectedStates.has(st));return ss.length===1?ss[0]:(ss.length?ss.join(', '):'—')};
- const g=a.filter(x=>x[ri]).sort((x,y)=>x[ri]-y[ri]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[ri],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]}));
- const d=a.filter(x=>x[di]).sort((x,y)=>x[di]-y[di]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[di],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]}));
- return {g,d};
-}
+function customerData(){const q=($('search')?.value||'').toLowerCase();if(!OLD_C.length)return {g:[],d:[]};const allowedZones=selectedStates.size?new Set(M.filter(r=>selectedStates.has(r.st)).map(r=>r.z)):null,hasZone=selectedZones.size>0||selectedStates.size>0,ri=hasZone?8:6,di=hasZone?9:7;let a=OLD_C.filter(x=>(!selectedZones.size||selectedZones.has(x[0]))&&(!allowedZones||allowedZones.has(x[0]))&&(!q||String(x[1]).toLowerCase().includes(q)||String(x[0]).toLowerCase().includes(q)));const stateName=z=>{const ss=[...(zoneStates.get(z)||[])].filter(st=>!selectedStates.size||selectedStates.has(st));return ss.length===1?ss[0]:(ss.length?ss.join(', '):'—')};const g=a.filter(x=>x[ri]).sort((x,y)=>x[ri]-y[ri]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[ri],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]})),d=a.filter(x=>x[di]).sort((x,y)=>x[di]-y[di]).slice(0,10).map(x=>({z:x[0],st:stateName(x[0]),rk:x[di],name:x[1],s25:x[2],s26:x[3],g:x[4],d:x[5]}));return {g,d}}
 function ctab(id,a){const el=$(id);if(!el)return;el.innerHTML=a.length?a.map(x=>`<tr><td>${E(x.z)}</td><td>${E(x.st)}</td><td>${x.rk}</td><td>${E(x.name)}</td><td>${F(x.s25)}</td><td>${F(x.s26)}</td><td class="${x.g>=0?'pos':'neg'}">${PCT(x.g)}</td><td class="${x.d>=0?'pos':'neg'}">${F(x.d)}</td></tr>`).join(''):'<tr><td colspan="8">No matching customer data.</td></tr>'}
-function cbars(id,a){const el=$(id);if(!el)return;if(!a.length){el.innerHTML='<div class="note">No matching customer data.</div>';return}const mx=Math.max(1,...a.map(x=>Math.abs(x.d)));el.innerHTML=a.map(x=>`<div class="bar"><div class="name" title="${E(x.name)}">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x.d)/mx*100}%"></div></div><div class="value">${F(x.d)}</div></div>`).join('')}
-function trend(){const el=$('trend');if(!el)return;if(selectedZones.size||selectedStates.size){el.innerHTML='<text x="450" y="150" text-anchor="middle" class="axis">Monthly trend is shown at Product level; Zone/State filters apply to all KPIs and analysis charts.</text>';return}if(!OLD_M.length){el.innerHTML='';return}const months=['January','February','March','April','May','June','July','August'],ok=x=>(!selectedProducts.size||selectedProducts.has(x[2])),a=months.map(m=>OLD_M.filter(x=>x[0]===2025&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),c=months.map(m=>OLD_M.filter(x=>x[0]===2026&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');el.innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('')}
+function cbars(id,a){const el=$(id);if(!el)return;if(!a.length){el.innerHTML='<div class="note">No matching customer data.</div>';return}const mx=Math.max(1,...a.map(x=>Math.abs(x.d)));el.innerHTML=a.map(x=>`<div class="bar"><div class="name">${E(x.name)}</div><div class="track"><div class="fill" style="width:${Math.abs(x.d)/mx*100}%"></div></div><div class="value">${F(x.d)}</div></div>`).join('')}
+function trend(){const el=$('trend');if(!el)return;if(selectedZones.size||selectedStates.size){el.innerHTML='<text x="450" y="150" text-anchor="middle" class="axis">Monthly trend is shown at Product level; Zone/State filters apply to KPIs and analysis charts.</text>';return}if(!OLD_M.length){el.innerHTML='';return}const months=['January','February','March','April','May','June','July','August'],ok=x=>(!selectedProducts.size||selectedProducts.has(x[2])),a=months.map(m=>OLD_M.filter(x=>x[0]===2025&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),c=months.map(m=>OLD_M.filter(x=>x[0]===2026&&x[1]===m&&ok(x)).reduce((s,x)=>s+(Number(x[3])||0),0)),mx=Math.max(1,...a,...c),xy=(v,i)=>[50+i*115,260-v/mx*220],line=v=>v.map((n,i)=>(i?'L':'M')+xy(n,i).join(',')).join(' ');el.innerHTML=`<path d="${line(a)}" fill="none" stroke="#a855f7" stroke-width="4"/><path d="${line(c)}" fill="none" stroke="#31ecff" stroke-width="4"/>`+months.map((m,i)=>`<text x="${50+i*115}" y="290" class="axis" text-anchor="middle">${m.slice(0,3)}</text>`).join('')}
 function selectionText(set,allLabel){return set.size===0?allLabel:(set.size===1?[...set][0]:`${set.size} selected`)}
-
-function render(){
- const a=rows(),t26=tot(a,2026),t25=tot(a,2025),zs=grp(a,'z'),ps=grp(a,'b'),growth=t25[0]?100*(t26[0]-t25[0])/t25[0]:(t26[0]?100:0),top=[...zs].sort((x,y)=>y.s26-x.s26)[0],cc=customerData();
- $('sales26').textContent=F(t26[0]);$('sales25').textContent='2025: '+F(t25[0]);$('growth').textContent=PCT(growth);$('growth').className=growth>=0?'pos':'neg';
- $('expire').textContent=F(t26[3]);$('expireRate').textContent=PCT(t26[1]?100*t26[3]/t26[1]:0)+' of Sold Amount';$('bonus').textContent=PCT(t26[4]?100*t26[5]/t26[4]:0);$('bonusQty').textContent=F(t26[5])+' bonus qty';$('returnRate').textContent=PCT(t26[1]?100*t26[2]/t26[1]:0);$('returnValue').textContent=F(t26[2])+' returned';
- $('topZone').textContent=top?top.name:'—';$('topShare').textContent=PCT(top&&t26[0]?100*top.s26/t26[0]:0)+' share';$('growCount').textContent=cc.g.length;$('declineCount').textContent=cc.d.length;
- compareBars('compare',zs);bars('growthBars',zs,'growth',true);bars('expireZone',zs,'expire');bars('expireZone2',zs,'expire');bars('productSales',ps,'s26');bars('productGrowth',ps,'growth',true);bars('expireProduct',ps,'expire');bars('expireProduct2',ps,'expire');bars('bonusProduct',ps,'bonusRate',true);bars('bonusProduct2',ps,'bonusRate',true);bars('bonusZone',zs,'bonusRate',true);
- table('zoneBody',zs,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(t26[0]?100*x.s26/t26[0]:0),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);
- table('productBody',ps,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);
- ctab('growthTable',cc.g);ctab('declineTable',cc.d);cbars('growBars',cc.g);cbars('declineBars',cc.d);
- $('donutTotal').textContent=F(t26[0]);$('legend').innerHTML=[...zs].sort((x,y)=>y.s26-x.s26).map(x=>`<div class="legendItem"><span>${E(x.name)}</span><strong>${PCT(t26[0]?100*x.s26/t26[0]:0)}</strong></div>`).join('');
- $('smart').innerHTML=`<div class="smartCard"><span>Selected Product</span><strong>${E(selectionText(selectedProducts,'All Products'))}</strong><small>${F(t26[0])} sales in 2026</small></div><div class="smartCard"><span>Selected Zone</span><strong>${E(selectionText(selectedZones,'All Zones'))}</strong><small>${top?E(top.name):'—'} top zone</small></div><div class="smartCard"><span>Selected State</span><strong>${E(selectionText(selectedStates,'All States'))}</strong><small>State Name filter</small></div><div class="smartCard"><span>YTD Growth</span><strong class="${growth>=0?'pos':'neg'}">${PCT(growth)}</strong><small>Jan–Aug 2026 vs 2025</small></div>`;
- trend();
-}
-
-$('search')?.addEventListener('input',render);
-$('resetBtn').onclick=()=>{selectedProducts.clear();selectedZones.clear();selectedStates.clear();document.querySelectorAll('.multiSelect').forEach(x=>x._sync&&x._sync());$('search').value='';render()};
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.view).classList.add('active')});
-$('langBtn').onclick=()=>{};
-render();
+function render(){const a=rows(),t26=tot(a,2026),t25=tot(a,2025),zs=grp(a,'z'),ps=grp(a,'b'),growth=t25[0]?100*(t26[0]-t25[0])/t25[0]:(t26[0]?100:0),top=[...zs].sort((x,y)=>y.s26-x.s26)[0],cc=customerData();$('sales26').textContent=F(t26[0]);$('sales25').textContent='2025: '+F(t25[0]);$('growth').textContent=PCT(growth);$('growth').className=growth>=0?'pos':'neg';$('expire').textContent=F(t26[3]);$('expireRate').textContent=PCT(t26[1]?100*t26[3]/t26[1]:0)+' of Sold Amount';$('bonus').textContent=PCT(t26[4]?100*t26[5]/t26[4]:0);$('bonusQty').textContent=F(t26[5])+' bonus qty';$('returnRate').textContent=PCT(t26[1]?100*t26[2]/t26[1]:0);$('returnValue').textContent=F(t26[2])+' returned';$('topZone').textContent=top?top.name:'—';$('topShare').textContent=PCT(top&&t26[0]?100*top.s26/t26[0]:0)+' share';$('growCount').textContent=cc.g.length;$('declineCount').textContent=cc.d.length;compareBars('compare',zs);bars('growthBars',zs,'growth',true);bars('expireZone',zs,'expire');bars('expireZone2',zs,'expire');bars('productSales',ps,'s26');bars('productGrowth',ps,'growth',true);bars('expireProduct',ps,'expire');bars('expireProduct2',ps,'expire');bars('bonusProduct',ps,'bonusRate',true);bars('bonusProduct2',ps,'bonusRate',true);bars('bonusZone',zs,'bonusRate',true);table('zoneBody',zs,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(t26[0]?100*x.s26/t26[0]:0),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);table('productBody',ps,[x=>E(x.name),x=>F(x.s26),x=>F(x.s25),x=>PCT(x.growth),x=>F(x.expire),x=>PCT(x.expireRate),x=>PCT(x.bonusRate),x=>PCT(x.returnRate)]);ctab('growthTable',cc.g);ctab('declineTable',cc.d);cbars('growBars',cc.g);cbars('declineBars',cc.d);$('donutTotal').textContent=F(t26[0]);$('legend').innerHTML=[...zs].sort((x,y)=>y.s26-x.s26).map(x=>`<div class="legendItem"><span>${E(x.name)}</span><strong>${PCT(t26[0]?100*x.s26/t26[0]:0)}</strong></div>`).join('');$('smart').innerHTML=`<div class="smartCard"><span>Selected Product</span><strong>${E(selectionText(selectedProducts,'All Products'))}</strong><small>${F(t26[0])} sales in 2026</small></div><div class="smartCard"><span>Selected Zone</span><strong>${E(selectionText(selectedZones,'All Zones'))}</strong><small>${top?E(top.name):'—'} top zone</small></div><div class="smartCard"><span>Selected State</span><strong>${E(HAS_STATE?selectionText(selectedStates,'All States'):'State data unavailable')}</strong><small>${HAS_STATE?'State Name filter':'Dashboard fallback active'}</small></div><div class="smartCard"><span>YTD Growth</span><strong class="${growth>=0?'pos':'neg'}">${PCT(growth)}</strong><small>Jan–Aug 2026 vs 2025</small></div>`;trend()}
+$('search')?.addEventListener('input',render);$('resetBtn').onclick=()=>{selectedProducts.clear();selectedZones.clear();selectedStates.clear();document.querySelectorAll('.multiSelect').forEach(x=>x._sync&&x._sync());$('search').value='';render()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.view).classList.add('active')});$('langBtn').onclick=()=>{};render();
